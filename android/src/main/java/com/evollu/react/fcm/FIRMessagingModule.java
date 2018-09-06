@@ -38,6 +38,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import com.google.firebase.FirebaseApp;
+import android.net.Uri;
+import android.media.RingtoneManager;
+import android.media.AudioAttributes;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
 
@@ -83,8 +86,11 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
 
     @ReactMethod
     public void createNotificationChannel(ReadableMap details, Promise promise){
+        Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager mngr = (NotificationManager) getReactApplicationContext().getSystemService(NOTIFICATION_SERVICE);
+            mngr.deleteNotificationChannel("default");
             String id = details.getString("id");
             String name = details.getString("name");
             String priority = details.getString("priority");
@@ -105,7 +111,9 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
                 default:
                     importance = NotificationManager.IMPORTANCE_DEFAULT;
             }
-            if (mngr.getNotificationChannel(id) != null) {
+            NotificationChannel existingChannel = mngr.getNotificationChannel(id);
+            if (existingChannel != null) {
+                existingChannel.setSound(defaultSoundUri, null);
                 promise.resolve(null);
                 return;
             }
@@ -113,11 +121,12 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
             NotificationChannel channel = new NotificationChannel(
                     id,
                     name,
-                    importance);
+                    NotificationManager.IMPORTANCE_DEFAULT);
             // Configure the notification channel.
             if(details.hasKey("description")){
                 channel.setDescription(details.getString("description"));
             }
+            channel.setSound(defaultSoundUri, null);
             mngr.createNotificationChannel(channel);
         }
         promise.resolve(null);
