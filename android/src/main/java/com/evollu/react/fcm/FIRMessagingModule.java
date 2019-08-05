@@ -113,6 +113,7 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
             }
             NotificationChannel existingChannel = mngr.getNotificationChannel(id);
             if (existingChannel != null) {
+                existingChannel.enableVibration(true);
                 existingChannel.setSound(defaultSoundUri, null);
                 promise.resolve(null);
                 return;
@@ -126,6 +127,7 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
             if(details.hasKey("description")){
                 channel.setDescription(details.getString("description"));
             }
+            channel.enableVibration(true);
             channel.setSound(defaultSoundUri, null);
             mngr.createNotificationChannel(channel);
         }
