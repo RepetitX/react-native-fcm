@@ -122,7 +122,7 @@ public class FIRMessagingModule extends ReactContextBaseJavaModule implements Li
             NotificationChannel channel = new NotificationChannel(
                     id,
                     name,
-                    NotificationManager.IMPORTANCE_DEFAULT);
+                    importance);
             // Configure the notification channel.
             if(details.hasKey("description")){
                 channel.setDescription(details.getString("description"));
