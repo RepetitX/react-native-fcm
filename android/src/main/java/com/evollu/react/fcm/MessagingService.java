@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.facebook.react.ReactApplication;
@@ -87,12 +87,12 @@ public class MessagingService extends FirebaseMessagingService {
         if(customNotification != null){
             try {
                 String messageId = data.get("messageId");
-		String messageRecipientId = data.get("messageRecipientId");
+		        String recipientId = data.get("recipientId");
                 String action = data.get("action");
                 String actionParams = data.get("actionParams");
                 JSONObject json = new JSONObject(customNotification);
                 json.put("messageId", messageId);
-		json.put("messageRecipientId", messageRecipientId);
+		        json.put("recipientId", recipientId);
                 json.put("action", action);
                 json.put("actionParams", actionParams);
                 Bundle bundle = BundleJSONConverter.convertToBundle(json);
