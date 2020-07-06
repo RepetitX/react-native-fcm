@@ -243,9 +243,22 @@ RCT_EXPORT_MODULE();
 
 + (void)didReceiveRemoteNotification:(nonnull NSDictionary *)userInfo fetchCompletionHandler:(nonnull RCTRemoteNotificationCallback)completionHandler {
     NSMutableDictionary* data = [[NSMutableDictionary alloc] initWithDictionary: userInfo];
+  
+  if ([data[@"action"] isEqualToString:@"CANCEL_NOTIFICATION"]) {
+    if ([data objectForKey:@"actionParams"]) {
+      NSError *jsonError;
+      NSData *actionParamsString = [data[@"actionParams"] dataUsingEncoding:NSUTF8StringEncoding];
+      NSDictionary *actionParams = [NSJSONSerialization JSONObjectWithData:actionParamsString
+                                            options:NSJSONReadingMutableContainers
+                                              error:&jsonError];
+      
+      [RNFIRMessaging cancelNotification:actionParams[@"id"]];
+    }
+  } else {
     [data setValue:@"remote_notification" forKey:@"_notificationType"];
     [data setValue:@(RCTSharedApplication().applicationState == UIApplicationStateInactive) forKey:@"opened_from_tray"];
     [self sendNotificationEventWhenAvailable:@{@"data": data, @"completionHandler": completionHandler}];
+  }
 }
 
 + (void)didReceiveLocalNotification:(UILocalNotification *)notification {
@@ -552,11 +565,22 @@ RCT_EXPORT_METHOD(scheduleLocalNotification:(id)data resolver:(RCTPromiseResolve
     }
 }
 
++(void)cancelNotification:(NSString*) notificationId
+{
+  if([UNUserNotificationCenter currentNotificationCenter] != nil){
+    [[UNUserNotificationCenter currentNotificationCenter] getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
+      for (UNNotification *notification in notifications) {
+        if ([notification.request.content.userInfo[@"id"] isEqualToString:notificationId]) {
+          [[UNUserNotificationCenter currentNotificationCenter] removeDeliveredNotificationsWithIdentifiers:@[notification.request.identifier]];
+        }
+      }
+    }];
+  }
+}
+
 RCT_EXPORT_METHOD(removeDeliveredNotification:(NSString*) notificationId)
 {
-    if([UNUserNotificationCenter currentNotificationCenter] != nil){
-        [[UNUserNotificationCenter currentNotificationCenter] removeDeliveredNotificationsWithIdentifiers:@[notificationId]];
-    }
+  [RNFIRMessaging cancelNotification:notificationId];
 }
 
 RCT_EXPORT_METHOD(removeAllDeliveredNotifications)

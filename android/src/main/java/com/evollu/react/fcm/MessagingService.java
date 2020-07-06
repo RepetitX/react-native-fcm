@@ -23,40 +23,53 @@ public class MessagingService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
-        Log.d(TAG, "Remote message received");
-        Intent i = new Intent("com.evollu.react.fcm.ReceiveNotification");
-        i.putExtra("data", remoteMessage);
-        handleBadge(remoteMessage);
-        buildLocalNotification(remoteMessage);
+        Map messageData = remoteMessage.getData();
+        if (messageData.containsKey("action") && messageData.get("action").equals("CANCEL_NOTIFICATION")) {
+            Object actionParams = messageData.get("actionParams");
+            try {
+                JSONObject json = new JSONObject(String.valueOf(actionParams));
+                String notificationId = json.getString("id");
+                FIRLocalMessagingHelper helper = new FIRLocalMessagingHelper(this.getApplication());
+                helper.removeDeliveredNotification(notificationId);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else {
+            Log.d(TAG, "Remote message received");
+            Intent i = new Intent("com.evollu.react.fcm.ReceiveNotification");
+            i.putExtra("data", remoteMessage);
+            handleBadge(remoteMessage);
+            buildLocalNotification(remoteMessage);
 
-        final Intent message = i;
-        
-        // We need to run this on the main thread, as the React code assumes that is true.
-        // Namely, DevServerHelper constructs a Handler() without a Looper, which triggers:
-        // "Can't create handler inside thread that has not called Looper.prepare()"
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
-            public void run() {
-                // Construct and load our normal React JS code bundle
-                ReactInstanceManager mReactInstanceManager = ((ReactApplication) getApplication()).getReactNativeHost().getReactInstanceManager();
-                ReactContext context = mReactInstanceManager.getCurrentReactContext();
-                // If it's constructed, send a notification
-                if (context != null) {
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(message);
-                } else {
-                    // Otherwise wait for construction, then send the notification
-                    mReactInstanceManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
-                        public void onReactContextInitialized(ReactContext context) {
-                            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(message);
+            final Intent message = i;
+
+            // We need to run this on the main thread, as the React code assumes that is true.
+            // Namely, DevServerHelper constructs a Handler() without a Looper, which triggers:
+            // "Can't create handler inside thread that has not called Looper.prepare()"
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(new Runnable() {
+                public void run() {
+                    // Construct and load our normal React JS code bundle
+                    ReactInstanceManager mReactInstanceManager = ((ReactApplication) getApplication()).getReactNativeHost().getReactInstanceManager();
+                    ReactContext context = mReactInstanceManager.getCurrentReactContext();
+                    // If it's constructed, send a notification
+                    if (context != null) {
+                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(message);
+                    } else {
+                        // Otherwise wait for construction, then send the notification
+                        mReactInstanceManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
+                            public void onReactContextInitialized(ReactContext context) {
+                                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(message);
+                            }
+                        });
+                        if (!mReactInstanceManager.hasStartedCreatingInitialContext()) {
+                            // Construct it in the background
+                            mReactInstanceManager.createReactContextInBackground();
                         }
-                    });
-                    if (!mReactInstanceManager.hasStartedCreatingInitialContext()) {
-                        // Construct it in the background
-                        mReactInstanceManager.createReactContextInBackground();
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     public void handleBadge(RemoteMessage remoteMessage) {
@@ -86,15 +99,20 @@ public class MessagingService extends FirebaseMessagingService {
         String customNotification = data.get("custom_notification");
         if(customNotification != null){
             try {
+                String id = data.get("id");
                 String messageId = data.get("messageId");
 		        String recipientId = data.get("recipientId");
                 String action = data.get("action");
                 String actionParams = data.get("actionParams");
+
                 JSONObject json = new JSONObject(customNotification);
+
+                json.put("id", id);
                 json.put("messageId", messageId);
 		        json.put("recipientId", recipientId);
                 json.put("action", action);
                 json.put("actionParams", actionParams);
+
                 Bundle bundle = BundleJSONConverter.convertToBundle(json);
                 FIRLocalMessagingHelper helper = new FIRLocalMessagingHelper(this.getApplication());
                 helper.sendNotification(bundle);
