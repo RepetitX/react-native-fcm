@@ -253,6 +253,7 @@ RCT_EXPORT_MODULE();
                                               error:&jsonError];
       
       [RNFIRMessaging cancelNotification:actionParams[@"id"]];
+      completionHandler(UIBackgroundFetchResultNoData);
     }
   } else {
     [data setValue:@"remote_notification" forKey:@"_notificationType"];
